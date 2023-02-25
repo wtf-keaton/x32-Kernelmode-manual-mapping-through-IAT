@@ -53,33 +53,19 @@ bool mmap::inject() {
 		return false;
 	}
 
-	uint8_t dll_stub[] = { "\x51\x52\x55\x56\x57\xB8\xDE\xC0\xAD\xDE\xBA\xDE\xC0\xAD\xDE\x89\x10\x31\xC0\x31\xD2\x83\xEC\x29\xB9\xEF\xBE\xAD\xDE\x31\xD2\x83\xC2\x02\xB8\xEF\xBE\xAD\xDE\xFF\xD0\x83\xC4\x29\x59\x5A\x5D\x5E\x5F\x31\xC0\xC3" };
+	uint8_t dll_stub[] = { "\x60\xB8\xDE\xC0\xAD\xDE\xBA\xDE\xC0\xAD\xDE\x89\x10\x31\xC0\xB9\xEF\xBE\xAD\xDE\xB8\xEF\xBE\xAD\xDE\xFF\xD0\x61\xC3" };
 
 	/*
 		dll_stub:
-		push ecx
-		push edx 
-		push ebp
-		push esi
-		push edi
+		pushad
 		mov eax, 0xdeadc0de
 		mov edx, 0xdeadc0de
 		mov [eax], edx
 		xor eax, eax
-		xor edx, edx
-		sub esp, byte+0x28
 		mov ecx, 0xdeadbeef
-		xor edx, edx
-		add edx, byte+0x1
 		mov eax, 0xdeadbeef
 		call eax
-		add esp, byte+0x28
-		pop ecx
-		pop edx 
-		pop ebp
-		pop esi
-		pop edi
-		xor eax, eax
+		popad
 		ret
 
 	*/
@@ -159,8 +145,8 @@ bool mmap::inject() {
 	uint32_t orginal_function_addr{ read_memory<uint32_t>(iat_function_ptr) };
 	LOG("IAT function pointer: 0x%p", iat_function_ptr);
 
-	*(uint32_t*)(dll_stub + 0x6) = iat_function_ptr;
-	*(uint32_t*)(dll_stub + 0xb) = orginal_function_addr;
+	*(uint32_t*)(dll_stub + 0x2) = iat_function_ptr;
+	*(uint32_t*)(dll_stub + 0x7) = orginal_function_addr;
 
 	proc->write_memory(base, (uintptr_t)raw_data, nt_header->FileHeader.SizeOfOptionalHeader + sizeof(nt_header->FileHeader) + sizeof(nt_header->Signature));
 
@@ -168,8 +154,8 @@ bool mmap::inject() {
 	map_pe_sections(base, nt_header);
 
 	uint32_t entry_point{ (uint32_t)base + nt_header->OptionalHeader.AddressOfEntryPoint };
-	*(uint32_t*)(dll_stub + 0x19) = (uint32_t)base;
-	*(uint32_t*)(dll_stub + 0x23) = entry_point;
+	*(uint32_t*)(dll_stub + 0x10) = (uint32_t)base;
+	*(uint32_t*)(dll_stub + 0x15) = entry_point;
 
 	LOG("Entry point: 0x%p", entry_point);	
 
